@@ -85,9 +85,9 @@ namespace JumpDetect.checks
                     previousStrain = obj.StrainValue;
 
                 var deltaStrain = obj.StrainValue - previousStrain;
-                if (deltaStrain >= 1)
+                if (deltaStrain >= 1.5)
                     yield return new Issue(GetTemplate("Prob"), beatmap, Timestamp.Get(obj.MapObject), obj.StrainValue);
-                else if (deltaStrain >= 0.5)
+                else if (deltaStrain >= 0.75)
                     yield return new Issue(GetTemplate("Warn"), beatmap, Timestamp.Get(obj.MapObject), obj.StrainValue);
                 else
                     yield return new Issue(GetTemplate("Minor"), beatmap, Timestamp.Get(obj.MapObject), obj.StrainValue);
