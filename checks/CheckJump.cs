@@ -1,6 +1,7 @@
 using MapsetParser.objects;
 using MapsetParser.objects.events;
 using MapsetParser.objects.hitobjects;
+using MapsetParser.objects.timinglines;
 using MapsetParser.statics;
 using MapsetParser.starrating.standard;
 using MapsetVerifierFramework;
@@ -12,6 +13,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using JumpDetect.helper;
 
 namespace JumpDetect.checks
 {
@@ -58,15 +60,15 @@ namespace JumpDetect.checks
             {
                 { "Prob",
                     new IssueTemplate(Issue.Level.Problem,
-                        "{0} Extremely huge spacing ({1}), ensure if it's intended.", "timestamp -", "aimValue")
+                        "{0} Extremely huge ({1}) spacing ({2}), ensure if it's intended.", "timestamp -", "snapping", "aimValue")
                     .WithCause("An extremely huge jump, which most of the time is unintended as they're too huge.") },
                 { "Warn",
                     new IssueTemplate(Issue.Level.Warning,
-                        "{0} Abnormally huge spacing ({1}), ensure if it's intended.", "timestamp -", "aimValue")
+                        "{0} Abnormally huge ({1}) spacing ({2}), ensure if it's intended.", "timestamp -", "snapping", "aimValue")
                     .WithCause("Probably a big jump, though it may be intended.") },
                 { "Minor",
                     new IssueTemplate(Issue.Level.Minor,
-                        "{0} Spacing is above average ({1}), though this is most likely fine.", "timestamp -", "aimValue")
+                        "{0} Spacing is above average for ({1}) snap ({2}), though this is most likely fine.", "snapping", "timestamp -", "aimValue")
                     .WithCause("Most likely doesn't matter, but it's a jump above average.") }
             };
         }
@@ -77,29 +79,59 @@ namespace JumpDetect.checks
             foreach (HitObject hitObject in beatmap.hitObjects.Skip(1))
             {
                 var strainValue = aimSkill.GetStrain(hitObject);
-                strainObjects.Add(new StrainObject(hitObject, strainValue));
+                var snapping = GetSnappingGap(beatmap, hitObject);
+                strainObjects.Add(
+                    new StrainObject
+                    {
+                        MapObject = hitObject,
+                        StrainValue = strainValue,
+                        Snapping = snapping
+                    }
+                );
             }
 
             strainObjects.Sort((x, y) => x.StrainValue.CompareTo(y.StrainValue));
+            var groupedSnap = strainObjects.GroupBy(x => x.Snapping);
+            foreach (var snappingGroup in groupedSnap)
+                foreach (var issue in GetHugeJumps(beatmap, snappingGroup))
+                    yield return issue;
+
+        }
+
+        private string GetSnappingGap(Beatmap beatmap, HitObject hitObject)
+        {
+            var previousObject = hitObject.PrevOrFirst();
+            var lastObjectTime = previousObject.GetEdgeTimes().Last();
+            var snappedCurrentObject = hitObject.time + beatmap.GetPracticalUnsnap(hitObject.time);
+            var snappedPreviousObject = lastObjectTime + beatmap.GetPracticalUnsnap(lastObjectTime);
+            var deltaTime = snappedCurrentObject - snappedPreviousObject;
+
+            UninheritedLine timingLine = beatmap.GetTimingLine<UninheritedLine>(snappedCurrentObject);
+            var snapping = Math.Round(deltaTime / timingLine.msPerBeat, 2);
+            return new Fraction(snapping).ToString();
+
+        }
+        private IEnumerable<Issue> GetHugeJumps(Beatmap beatmap, IGrouping<string, StrainObject> strainObjects)
+        {
             var biggestJumps = strainObjects.TakeLast(10).ToList();
             double previousStrain = 0.0;
             for (var i = 0; i < biggestJumps.Count; i++)
             {
                 StrainObject currentObject = biggestJumps[i];
-                StrainObject nextObject = null;
-                if (i + 1 < biggestJumps.Count)
-                    nextObject = biggestJumps[i + 1];
+                StrainObject nextNextHighest = null;
+                if (i + 2 < biggestJumps.Count)
+                    nextNextHighest = biggestJumps[i + 2];
 
                 if (previousStrain == 0.0)
                     previousStrain = currentObject.StrainValue;
                 var currentStrain = currentObject.StrainValue;
-                var nextStrain = nextObject != null ? nextObject.StrainValue : double.MaxValue;
+                var nextNextStrain = nextNextHighest != null ? nextNextHighest.StrainValue : double.MaxValue;
 
                 var deltaStrain = currentStrain - previousStrain;
-                var nextDeltaStrain = nextStrain - currentStrain;
+                var nextNextDeltaStrain = nextNextStrain - currentStrain;
 
                 previousStrain = currentStrain;
-                if (nextDeltaStrain < 0.75)
+                if (nextNextDeltaStrain < 0.75)
                     continue;
 
                 if (deltaStrain >= 1.5)
@@ -107,6 +139,7 @@ namespace JumpDetect.checks
                         GetTemplate("Prob"),
                         beatmap,
                         Timestamp.Get(currentObject.MapObject),
+                        strainObjects.Key,
                         currentStrain
                     );
                 else if (deltaStrain >= 0.75)
@@ -114,6 +147,7 @@ namespace JumpDetect.checks
                         GetTemplate("Warn"),
                         beatmap,
                         Timestamp.Get(currentObject.MapObject),
+                        strainObjects.Key,
                         currentStrain
                     );
                 else if (i != biggestJumps.Count - 1)
@@ -121,6 +155,7 @@ namespace JumpDetect.checks
                         GetTemplate("Minor"),
                         beatmap,
                         Timestamp.Get(currentObject.MapObject),
+                        strainObjects.Key,
                         currentStrain
                     );
             }
@@ -129,13 +164,9 @@ namespace JumpDetect.checks
 
     public class StrainObject
     {
-        public StrainObject(HitObject mapObject, double strainValue)
-        {
-            MapObject = mapObject;
-            StrainValue = strainValue;
-        }
-        public virtual HitObject MapObject { get; private set; }
-        public virtual double StrainValue { get; private set; }
+        public HitObject MapObject { get; set; }
+        public double StrainValue { get; set; }
+        public string Snapping { get; set; }
     }
 
     public class ObjectAim : Aim
