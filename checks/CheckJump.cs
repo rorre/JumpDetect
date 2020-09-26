@@ -78,7 +78,7 @@ namespace JumpDetect.checks
             ObjectAim aimSkill = new ObjectAim();
             foreach (HitObject hitObject in beatmap.hitObjects.Skip(1))
             {
-                var strainValue = aimSkill.GetStrain(hitObject);
+                var strainValue = Math.Round(aimSkill.GetStrain(hitObject), 2);
                 var snapping = GetSnappingGap(beatmap, hitObject);
                 strainObjects.Add(
                     new StrainObject
