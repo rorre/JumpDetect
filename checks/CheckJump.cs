@@ -79,11 +79,11 @@ namespace JumpDetect.checks
             strainObjects.Sort((x, y) => x.StrainValue.CompareTo(y.StrainValue));
             var biggestJumps = strainObjects.TakeLast(10).ToList();
             double previousStrain = 0.0;
-            for (var i = 0; i < biggestJumps.Count(); i++)
+            for (var i = 0; i < biggestJumps.Count; i++)
             {
                 StrainObject currentObject = biggestJumps[i];
                 StrainObject nextObject = null;
-                if (i + 1 < biggestJumps.Count())
+                if (i + 1 < biggestJumps.Count)
                     nextObject = biggestJumps[i + 1];
 
                 if (previousStrain == 0.0)
@@ -112,7 +112,7 @@ namespace JumpDetect.checks
                         Timestamp.Get(currentObject.MapObject),
                         currentStrain
                     );
-                else
+                else if (i != biggestJumps.Count)
                     yield return new Issue(
                         GetTemplate("Minor"),
                         beatmap,
