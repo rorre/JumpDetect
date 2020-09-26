@@ -112,7 +112,7 @@ namespace JumpDetect.checks
                         Timestamp.Get(currentObject.MapObject),
                         currentStrain
                     );
-                else if (i != biggestJumps.Count)
+                else if (i != biggestJumps.Count - 1)
                     yield return new Issue(
                         GetTemplate("Minor"),
                         beatmap,
