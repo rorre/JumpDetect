@@ -90,7 +90,6 @@ namespace JumpDetect.checks
                 );
             }
 
-            strainObjects.Sort((x, y) => x.StrainValue.CompareTo(y.StrainValue));
             var groupedSnap = strainObjects.GroupBy(x => x.Snapping);
             foreach (var snappingGroup in groupedSnap)
                 foreach (var issue in GetHugeJumps(beatmap, snappingGroup))
@@ -113,25 +112,37 @@ namespace JumpDetect.checks
         }
         private IEnumerable<Issue> GetHugeJumps(Beatmap beatmap, IGrouping<string, StrainObject> strainObjects)
         {
-            var biggestJumps = strainObjects.TakeLast(10).ToList();
+            var sortedStrain = strainObjects.ToList();
+            sortedStrain.Sort((x, y) => x.StrainValue.CompareTo(y.StrainValue));
+
+            var biggestJumps = sortedStrain.TakeLast(10).ToList();
             double previousStrain = 0.0;
+
+            if (biggestJumps.Count < 5)
+                yield break;
+
             for (var i = 0; i < biggestJumps.Count; i++)
             {
                 StrainObject currentObject = biggestJumps[i];
+                StrainObject nextHighest = null;
                 StrainObject nextNextHighest = null;
+                if (i + 1 < biggestJumps.Count)
+                    nextHighest = biggestJumps[i + 1];
+
                 if (i + 2 < biggestJumps.Count)
                     nextNextHighest = biggestJumps[i + 2];
 
                 if (previousStrain == 0.0)
                     previousStrain = currentObject.StrainValue;
                 var currentStrain = currentObject.StrainValue;
+                var nextStrain = nextHighest != null ? nextHighest.StrainValue : double.MaxValue;
                 var nextNextStrain = nextNextHighest != null ? nextNextHighest.StrainValue : double.MaxValue;
 
                 var deltaStrain = currentStrain - previousStrain;
-                var nextNextDeltaStrain = nextNextStrain - currentStrain;
+                var nextNextDeltaStrain = nextNextStrain - nextStrain;
 
                 previousStrain = currentStrain;
-                if (nextNextDeltaStrain < 0.75)
+                if (nextNextDeltaStrain < 0.75 && nextStrain < 0.75)
                     continue;
 
                 if (deltaStrain >= 1.5)
