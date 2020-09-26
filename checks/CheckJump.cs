@@ -53,7 +53,7 @@ namespace JumpDetect.checks
             return new Dictionary<string, IssueTemplate>()
             {
                 { "Prob",
-                    new IssueTemplate(Issue.Level.Warning,
+                    new IssueTemplate(Issue.Level.Problem,
                         "{0} Extremely huge spacing ({1}), ensure if it's intended.", "timestamp -", "aimValue")
                     .WithCause("An extremely huge jump, which most of the time is unintended as they're too huge.") },
                 { "Warn",
