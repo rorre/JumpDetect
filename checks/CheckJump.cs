@@ -77,21 +77,48 @@ namespace JumpDetect.checks
             }
 
             strainObjects.Sort((x, y) => x.StrainValue.CompareTo(y.StrainValue));
-            var biggestJumps = strainObjects.TakeLast(10);
+            var biggestJumps = strainObjects.TakeLast(10).ToList();
             double previousStrain = 0.0;
-            foreach (var obj in biggestJumps)
+            for (var i = 0; i < biggestJumps.Count(); i++)
             {
-                if (previousStrain == 0.0)
-                    previousStrain = obj.StrainValue;
+                StrainObject currentObject = biggestJumps[i];
+                StrainObject nextObject = null;
+                if (i + 1 < biggestJumps.Count())
+                    nextObject = biggestJumps[i + 1];
 
-                var deltaStrain = obj.StrainValue - previousStrain;
+                if (previousStrain == 0.0)
+                    previousStrain = currentObject.StrainValue;
+                var currentStrain = currentObject.StrainValue;
+                var nextStrain = nextObject != null ? nextObject.StrainValue : double.MaxValue;
+
+                var deltaStrain = currentStrain - previousStrain;
+                var nextDeltaStrain = nextStrain - currentStrain;
+
+                previousStrain = currentStrain;
+                if (nextDeltaStrain < 0.75)
+                    continue;
+
                 if (deltaStrain >= 1.5)
-                    yield return new Issue(GetTemplate("Prob"), beatmap, Timestamp.Get(obj.MapObject), obj.StrainValue);
+                    yield return new Issue(
+                        GetTemplate("Prob"),
+                        beatmap,
+                        Timestamp.Get(currentObject.MapObject),
+                        currentStrain
+                    );
                 else if (deltaStrain >= 0.75)
-                    yield return new Issue(GetTemplate("Warn"), beatmap, Timestamp.Get(obj.MapObject), obj.StrainValue);
+                    yield return new Issue(
+                        GetTemplate("Warn"),
+                        beatmap,
+                        Timestamp.Get(currentObject.MapObject),
+                        currentStrain
+                    );
                 else
-                    yield return new Issue(GetTemplate("Minor"), beatmap, Timestamp.Get(obj.MapObject), obj.StrainValue);
-                previousStrain = obj.StrainValue;
+                    yield return new Issue(
+                        GetTemplate("Minor"),
+                        beatmap,
+                        Timestamp.Get(currentObject.MapObject),
+                        currentStrain
+                    );
             }
         }
     }
