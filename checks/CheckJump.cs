@@ -21,6 +21,10 @@ namespace JumpDetect.checks
         private const int sectionLength = 400;
         public override CheckMetadata GetMetadata() => new BeatmapCheckMetadata()
         {
+            Modes = new Beatmap.Mode[]
+            {
+                Beatmap.Mode.Standard
+            },
             Category = "Compose",
             Message = "Abnormally huge spacing.",
             Author = "-Keitaro",
