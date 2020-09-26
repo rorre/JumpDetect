@@ -99,15 +99,17 @@ namespace JumpDetect.checks
 
         private string GetSnappingGap(Beatmap beatmap, HitObject hitObject)
         {
-            var previousObject = hitObject.PrevOrFirst();
-            var lastObjectTime = previousObject.GetEdgeTimes().Last();
-            var snappedCurrentObject = hitObject.time + beatmap.GetPracticalUnsnap(hitObject.time);
-            var snappedPreviousObject = lastObjectTime + beatmap.GetPracticalUnsnap(lastObjectTime);
-            var deltaTime = snappedCurrentObject - snappedPreviousObject;
+            HitObject previousObject = hitObject.PrevOrFirst();
+            double lastObjectTime = previousObject.GetEdgeTimes().Last();
+            double snappedCurrentObject = hitObject.time + beatmap.GetPracticalUnsnap(hitObject.time);
+            double snappedPreviousObject = lastObjectTime + beatmap.GetPracticalUnsnap(lastObjectTime);
+            double deltaTime = snappedCurrentObject - snappedPreviousObject;
 
             UninheritedLine timingLine = beatmap.GetTimingLine<UninheritedLine>(snappedCurrentObject);
+
             var snapping = Math.Round(deltaTime / timingLine.msPerBeat, 2);
-            return new Fraction(snapping).ToString();
+            var snappingStr = new Fraction(snapping).ToString();
+            return snappingStr;
 
         }
         private IEnumerable<Issue> GetHugeJumps(Beatmap beatmap, IGrouping<string, StrainObject> strainObjects)
@@ -149,7 +151,7 @@ namespace JumpDetect.checks
                     yield return new Issue(
                         GetTemplate("Prob"),
                         beatmap,
-                        Timestamp.Get(currentObject.MapObject),
+                        Timestamp.Get(currentObject.MapObject.Prev(), currentObject.MapObject),
                         strainObjects.Key,
                         currentStrain
                     );
@@ -157,15 +159,15 @@ namespace JumpDetect.checks
                     yield return new Issue(
                         GetTemplate("Warn"),
                         beatmap,
-                        Timestamp.Get(currentObject.MapObject),
+                        Timestamp.Get(currentObject.MapObject.Prev(), currentObject.MapObject),
                         strainObjects.Key,
                         currentStrain
                     );
-                else if (i != biggestJumps.Count - 1)
+                else if (deltaStrain >= 0.5 && i != biggestJumps.Count - 1)
                     yield return new Issue(
                         GetTemplate("Minor"),
                         beatmap,
-                        Timestamp.Get(currentObject.MapObject),
+                        Timestamp.Get(currentObject.MapObject.Prev(), currentObject.MapObject),
                         strainObjects.Key,
                         currentStrain
                     );
