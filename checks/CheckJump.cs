@@ -77,12 +77,9 @@ namespace JumpDetect.checks
             }
 
             strainObjects.Sort((x, y) => x.StrainValue.CompareTo(y.StrainValue));
-            var avg = strainObjects.Average(x => x.StrainValue);
-            var zooom = strainObjects
-                .Where(x => x.StrainValue > avg)
-                .TakeLast(10);
+            var biggestJumps = strainObjects.TakeLast(10);
             double previousStrain = 0.0;
-            foreach (var obj in zooom)
+            foreach (var obj in biggestJumps)
             {
                 if (previousStrain == 0.0)
                     previousStrain = obj.StrainValue;
@@ -96,7 +93,6 @@ namespace JumpDetect.checks
                     yield return new Issue(GetTemplate("Minor"), beatmap, Timestamp.Get(obj.MapObject), obj.StrainValue);
                 previousStrain = obj.StrainValue;
             }
-
         }
     }
 
